@@ -8,6 +8,8 @@ they run. G1 is implemented here; G2 and G3 plug into the same wrapper.
 | G0 | Plain `LLMAgent`, policy in the prompt only | `llm_agent` |
 | G1 | `LLMAgent` + LLM judge (PolicyGuard-style) | `g1_replan`, `g1_feedback`, `g1_notify`, `g1_terminate` |
 
+Experiment scripts, results and audits: `src/experiments/guards/README.md`.
+
 ## How it works
 
 `GuardedAgent` (`base.py`) wraps G0's `LLMAgent` unchanged. When the inner
@@ -76,9 +78,9 @@ v3's one "false block" on train is task 39, whose gold cancels a reservation
 the policy does not allow cancelling. The samples are small; treat these as
 directional.
 
-**Test-split caveat.** The v1 -> v2 -> v3 changes were prompted by failures
-seen in a k=1 G1 run on the *test* split (tasks 22, 24, 29, 37, 48), before the
-train-split data existed. Tuning and the table above use train only, but the
+**Test-split caveat.** The v1 -> v2 -> v3 changes were prompted by guard
+decisions seen in a k=1 G1 run on the *test* split (tasks 22, 24, 29, 37, 48),
+before the train-split data existed. Tuning and the table above use train only, but the
 final test-split numbers for G1 should be reported with this caveat (or with
 those tasks reported separately).
 
