@@ -38,8 +38,13 @@ under both strict and non-strict replay.
 
 The proposal's three strategies are `terminate`, `replan` and `notify`;
 `feedback` is the common middle ground (agent gets the reason, user does not).
-If the replan budget runs out, the agent replies "I'm sorry, but I'm unable to
-complete that request."
+
+In `replan` and `feedback` the agent may retry up to `guard_max_replans` times
+after a block, so `guard_max_replans + 1` blocked attempts in a row. The count
+is per agent step (one reply to a user message or tool result) and starts over
+once a step goes through, for example a read-only call. If every retry is
+blocked, the agent replies "I'm sorry, but I'm unable to complete that
+request."
 
 ### The G1 judge
 
@@ -55,8 +60,9 @@ facts confirmed by tool results, not user claims). Without it G1 would be a
 strawman. `guard_evidence_rule: false` removes the rule, which gives the G1
 counterpart of the G3-trust-all ablation.
 
-If the judge errors or returns unparseable output twice, the call is blocked
-(`guard_on_error: "block"`) and the error is logged.
+If the judge call fails (after litellm's own retries), or the judge returns
+unparseable output twice, the call is blocked and the error is logged. That is
+the default `guard_on_error: "block"`; `"allow"` lets the call through instead.
 
 #### Prompt versions (`guard_prompt_version`)
 
@@ -146,7 +152,7 @@ records the git commit, and uncommitted code is not identified by it.
 | `guard_evidence_rule` | `true` | include the "trust only tool results" rule |
 | `guard_prompt_version` | `"v3"` | judge prompt: `v1`, `v2` or `v3` |
 | `guard_tools` | all DB-writing tools | list of tool names to guard |
-| `guard_max_replans` | `3` | blocked attempts allowed per turn in `replan`/`feedback` |
+| `guard_max_replans` | `3` | retries after a block in `replan`/`feedback`, per agent step (see "Block modes") |
 | `guard_on_error` | `"block"` | `"block"` or `"allow"` when the judge fails |
 
 Qwen3-8B behind vLLM as the agent, with the API judge:
