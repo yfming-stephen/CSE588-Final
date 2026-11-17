@@ -8,6 +8,8 @@ guards work is in `src/tau2/guards/README.md`.
 | `run_g0_g1_test_k4.sh` | G0 vs G1 run on the airline test split, 4 trials per task. Re-running it fills in only missing sims |
 | `compare_runs.py` | Compares two runs: pass^k, writes on no-write tasks, guard stats, cost, paired tests, per-task table |
 | `show_sim.py` | Prints a task, or one simulation with every guard decision (used for the audits) |
+| `audits/g2_train_smoke.md` | G2 small training runs and confirmation-parser repairs |
+| `audits/g2_train_expand.md` | G2 v5 four-task training run, costs, independent failure audit, v6 and v7 offline repairs |
 | `audits/compare_test_k4_matched.json` | Every number from `compare_runs.py --matched` below |
 | `audits/blocks_test_k4.json` | Audit of every G1 block |
 | `audits/allows_test_k4.json` | Audit of every G1 allow that is not an exact gold call |

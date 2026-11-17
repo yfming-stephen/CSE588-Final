@@ -33,6 +33,7 @@ from tau2.guards.llm_judge import (
     parse_verdict,
     render_transcript,
 )
+from tau2.guards.rule_based import AirlineRuleGuard
 from tau2.orchestrator.orchestrator import Orchestrator
 from tau2.registry import registry
 from tau2.run import get_tasks
@@ -358,8 +359,9 @@ def reservation_id(airline_env_factory):
 
 
 @pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize("rule_based", [False, True])
 def test_blocked_write_never_reaches_scored_db(
-    airline_tools, airline_env_factory, reservation_id, strict
+    airline_tools, airline_env_factory, reservation_id, strict, rule_based
 ):
     tools, policy = airline_tools
     script = [
@@ -368,7 +370,9 @@ def test_blocked_write_never_reaches_scored_db(
     ]
     agent = GuardedAgent(
         inner=ScriptedAgent(tools, policy, script),
-        guard=FakeGuard(deny={"cancel_reservation"}),
+        guard=AirlineRuleGuard()
+        if rule_based
+        else FakeGuard(deny={"cancel_reservation"}),
         mode=BlockMode.REPLAN,
     )
     sim, task = run_airline(

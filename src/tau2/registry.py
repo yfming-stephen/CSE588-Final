@@ -54,7 +54,7 @@ from tau2.domains.telecom.environment import (
     get_tasks_split as telecom_domain_get_tasks_split,
 )
 from tau2.environment.environment import Environment
-from tau2.guards.factory import G1_AGENT_FACTORIES
+from tau2.guards.factory import G1_AGENT_FACTORIES, G2_AGENT_FACTORIES
 from tau2.user.user_simulator import DummyUser, UserSimulator
 from tau2.user.user_simulator_base import FullDuplexUser, HalfDuplexUser
 
@@ -313,6 +313,8 @@ try:
     )
     # CSE 588 guards: g1_replan, g1_feedback, g1_notify, g1_terminate
     for name, factory in G1_AGENT_FACTORIES.items():
+        registry.register_agent_factory(factory, name)
+    for name, factory in G2_AGENT_FACTORIES.items():
         registry.register_agent_factory(factory, name)
     registry.register_domain(mock_domain_get_environment, "mock")
     registry.register_tasks(mock_domain_get_tasks, "mock")

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -42,6 +43,7 @@ from tau2.guards.base import (
     is_mutating_tool,
 )
 from tau2.guards.llm_judge import DEFAULT_GUARD_LLM, LLMJudgeGuard
+from tau2.guards.rule_based import AirlineRuleGuard
 from tau2.guards.summarize import load_simulations
 
 
@@ -200,6 +202,26 @@ def metrics(attempts: list[Attempt], versions: list[str]) -> dict:
     return out
 
 
+def run_rules(attempts: list[Attempt], context: GuardContext, repeats: int = 1) -> None:
+    """Evaluate G2 on recorded attempts without any model/API calls."""
+    guard = AirlineRuleGuard()
+    for attempt in attempts:
+        attempt.verdicts["g2"] = []
+        for _ in range(repeats):
+            start = time.perf_counter()
+            verdict = guard.check(attempt.tool_call, attempt.transcript, context)
+            attempt.verdicts["g2"].append(
+                {
+                    "allow": verdict.allow,
+                    "violated_conditions": verdict.violated_conditions,
+                    "rationale": verdict.rationale,
+                    "checks": (verdict.details or {}).get("checks"),
+                    "latency_seconds": time.perf_counter() - start,
+                    "cost": 0.0,
+                }
+            )
+
+
 def main() -> None:
     from tau2.run import get_tasks
     from tau2.runner.build import build_environment
@@ -207,6 +229,12 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("results", type=Path, nargs="+")
     p.add_argument("--domain", default="airline")
+    p.add_argument(
+        "--guard",
+        choices=["g1", "g2"],
+        default="g1",
+        help="g2 uses deterministic rules and makes no API calls",
+    )
     p.add_argument("--versions", nargs="+", default=["v1", "v2"])
     p.add_argument("--repeats", type=int, default=1)
     p.add_argument("--judge-llm", default=DEFAULT_GUARD_LLM)
@@ -214,6 +242,10 @@ def main() -> None:
     p.add_argument("--max-workers", type=int, default=4)
     p.add_argument("--out", type=Path)
     args = p.parse_args()
+    if args.repeats < 1:
+        p.error("--repeats must be positive")
+    if args.guard == "g2" and args.domain != "airline":
+        p.error("G2 currently supports airline only")
 
     env = build_environment(args.domain)
     tools = env.get_tools()
@@ -239,15 +271,19 @@ def main() -> None:
             for lab in ("gold", "forbidden", "other")
         )
     )
-    run_judges(
-        attempts,
-        context,
-        args.versions,
-        args.repeats,
-        args.judge_llm,
-        not args.no_evidence_rule,
-        args.max_workers,
-    )
+    if args.guard == "g2":
+        args.versions = ["g2"]
+        run_rules(attempts, context, args.repeats)
+    else:
+        run_judges(
+            attempts,
+            context,
+            args.versions,
+            args.repeats,
+            args.judge_llm,
+            not args.no_evidence_rule,
+            args.max_workers,
+        )
     summary = metrics(attempts, args.versions)
     print(json.dumps(summary, indent=2))
 

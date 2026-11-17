@@ -29,6 +29,7 @@ from tau2.guards.llm_judge import (
     DEFAULT_PROMPT_VERSION,
     LLMJudgeGuard,
 )
+from tau2.guards.rule_based import AirlineRuleGuard
 
 GUARD_ARG_PREFIX = "guard_"
 
@@ -83,4 +84,32 @@ def create_g1_agent(
 
 G1_AGENT_FACTORIES: dict[str, Callable] = {
     f"g1_{mode.value}": partial(create_g1_agent, mode=mode) for mode in BlockMode
+}
+
+
+def create_g2_agent(tools, domain_policy, *, mode: BlockMode | str, **kwargs):
+    """Create an airline agent guarded by explicit business-policy predicates."""
+    if not domain_policy.startswith("# Airline Agent Policy"):
+        raise ValueError("G2 currently supports only the airline domain")
+    agent_args, opts = split_guard_args(kwargs.get("llm_args"))
+    inner = LLMAgent(
+        tools=tools,
+        domain_policy=domain_policy,
+        llm=kwargs.get("llm"),
+        llm_args=agent_args,
+    )
+    max_replans = opts.pop("max_replans", 3)
+    if opts:
+        raise ValueError(f"Unknown G2 guard options: {sorted(opts)}")
+    return GuardedAgent(
+        inner=inner,
+        guard=AirlineRuleGuard(),
+        mode=mode,
+        max_replans=max_replans,
+        on_guard_error="block",
+    )
+
+
+G2_AGENT_FACTORIES: dict[str, Callable] = {
+    f"g2_{mode.value}": partial(create_g2_agent, mode=mode) for mode in BlockMode
 }

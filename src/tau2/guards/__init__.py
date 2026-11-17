@@ -10,8 +10,10 @@ from tau2.guards.base import (
     is_mutating_tool,
 )
 from tau2.guards.llm_judge import DEFAULT_GUARD_LLM, LLMJudgeGuard
+from tau2.guards.rule_based import AirlineRuleGuard
 
 __all__ = [
+    "AirlineRuleGuard",
     "BlockMode",
     "DEFAULT_GUARD_LLM",
     "Guard",

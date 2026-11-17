@@ -1,12 +1,25 @@
 # Guards (CSE 588)
 
 Pre-execution guards that check an agent's database-writing tool calls before
-they run. G1 is implemented here; G2 and G3 plug into the same wrapper.
+they run. G1 and G2 use the same wrapper; G3 can plug into it as well.
 
 | Arm | What it is | CLI `--agent` |
 |-----|------------|---------------|
 | G0 | Plain `LLMAgent`, policy in the prompt only | `llm_agent` |
 | G1 | `LLMAgent` + LLM judge (PolicyGuard-style) | `g1_replan`, `g1_feedback`, `g1_notify`, `g1_terminate` |
+| G2 | `LLMAgent` + explicit airline business-policy rules | `g2_replan`, `g2_feedback`, `g2_notify`, `g2_terminate` |
+
+## G2 rule-based guard
+
+G2 checks explicit business-policy conditions before each sensitive call, without
+using a judge model. All six airline writes are covered: booking, cancellation,
+flight/cabin changes, baggage changes, passenger changes and compensation.
+The agent, block modes, logging and replay-safe execution are shared with G1.
+
+See [G2.md](G2.md) for the rule matrix, input/confirmation parsing, offline
+comparison commands, tests and limitations. Retail is not supported by this
+implementation. Coverage of every write tool does not imply a measured attack
+success rate or zero false blocks on unrestricted natural-language dialogues.
 
 Experiment scripts, results and audits: `src/experiments/guards/README.md`.
 
@@ -201,7 +214,7 @@ Attempts are labeled `gold` (exact gold action: should be allowed),
 (unlabeled). It prints deny rates per label, how often repeats disagree, cost,
 and every attempt where the first and last version disagree.
 
-## Adding G2 / G3
+## Adding another guard
 
 Subclass `Guard`, implement `check(tool_call, transcript, context) ->
 GuardDecision`, and register a factory like `create_g1_agent` in `factory.py`.
